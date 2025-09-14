@@ -1,6 +1,6 @@
 {
-  "name": "Copy of AI Creative Suite",
-  "description": "An intuitive web application that allows users to edit photos with text prompts using Google's Gemini 'Nano Banana' model, and generate videos from text and images using the 'Veo' model.",
+  "name": "कला AI",
+  "description": "A powerful creative suite powered by Google's Gemini AI. Edit photos with text prompts and generate stunning videos from text and images.",
   "requestFramePermissions": [
     "camera"
   ]

@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Header } from './components/Header';
 import { ImageUploader } from './components/ImageUploader';
 import { ImageViewer } from './components/ImageViewer';
@@ -8,7 +8,7 @@ import { ImageComparator } from './components/ImageComparator';
 import { AdvancedControls } from './components/AdvancedControls';
 import { VideoControls } from './components/VideoControls';
 import { CameraCapture } from './components/CameraCapture';
-import { editImage, generateVideo } from './services/geminiService';
+import { editImage, startVideoGeneration, pollVideoGeneration } from './services/geminiService';
 import type { ImageFile } from './types';
 import { UploadIcon, SparklesIcon, LightbulbIcon, UndoIcon, RedoIcon, DownloadIcon, LayoutColumnsIcon, LayoutGridIcon, ImagesIcon, TrashIcon, CameraIcon, VideoIcon } from './components/Icons';
 
@@ -92,6 +92,8 @@ export default function App() {
   const [videoQuality, setVideoQuality] = useState<string>('High');
   const [videoStyle, setVideoStyle] = useState<string>('Cinematic');
   const [videoEffect, setVideoEffect] = useState<string>('None');
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
 
   // Photo derived state
   const activeHistory = activeImageIndex !== null ? histories[activeImageIndex] : null;
@@ -102,7 +104,7 @@ export default function App() {
   const originalImageForDisplay = activeHistory?.edits[0] ?? null;
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (isLoading && editorMode === 'video') {
       setLoadingMessage(loadingMessages[0]);
       let i = 1;
@@ -114,11 +116,16 @@ export default function App() {
     return () => clearInterval(interval);
   }, [isLoading, editorMode]);
   
-  // Effect to clean up the video object URL to prevent memory leaks
+  // Effect to clean up resources
   useEffect(() => {
     return () => {
+      // Revoke blob URL to prevent memory leaks
       if (generatedVideoUrl && generatedVideoUrl.startsWith('blob:')) {
         URL.revokeObjectURL(generatedVideoUrl);
+      }
+      // Clear any running polling interval on component unmount
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
       }
     };
   }, [generatedVideoUrl]);
@@ -130,6 +137,10 @@ export default function App() {
   };
   
   const resetState = () => {
+    if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+    }
     setPrompt('');
     setIsLoading(false);
     setError(null);
@@ -268,11 +279,16 @@ export default function App() {
         setError('Please provide a prompt to generate a video.');
         return;
     }
-    
+
+    if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+    }
+
     setIsLoading(true);
     setError(null);
     setResponseText(null);
-    
+    setGeneratedVideoUrl(null);
+
     try {
         const startImage = videoStartImage ? { base64: videoStartImage.base64, mimeType: videoStartImage.file.type } : null;
         
@@ -281,40 +297,48 @@ export default function App() {
 
         let finalPrompt = '';
         switch (videoEffect) {
-            case 'None':
-                finalPrompt = `${corePrompt}, ${styleAndQuality}.`;
-                break;
-            case 'Slow-motion':
-                finalPrompt = `A slow-motion version of ${corePrompt}, ${styleAndQuality}.`;
-                break;
-            case 'Fast-forward':
-                finalPrompt = `A fast-forward version of ${corePrompt}, ${styleAndQuality}.`;
-                break;
-            case 'Cinematic Color Grade':
-                finalPrompt = `${corePrompt} with a cinematic color grade, ${styleAndQuality}.`;
-                break;
-            case 'Black and White':
-                 finalPrompt = `A black and white version of ${corePrompt}, ${styleAndQuality}.`;
-                break;
-            case 'Vintage Film':
-                 finalPrompt = `${corePrompt} with a vintage film effect, ${styleAndQuality}.`;
-                break;
-            default:
-                 finalPrompt = `${corePrompt}, ${styleAndQuality}.`;
+            case 'None': finalPrompt = `${corePrompt}, ${styleAndQuality}.`; break;
+            case 'Slow-motion': finalPrompt = `A slow-motion version of ${corePrompt}, ${styleAndQuality}.`; break;
+            case 'Fast-forward': finalPrompt = `A fast-forward version of ${corePrompt}, ${styleAndQuality}.`; break;
+            case 'Cinematic Color Grade': finalPrompt = `${corePrompt} with a cinematic color grade, ${styleAndQuality}.`; break;
+            case 'Black and White': finalPrompt = `A black and white version of ${corePrompt}, ${styleAndQuality}.`; break;
+            case 'Vintage Film': finalPrompt = `${corePrompt} with a vintage film effect, ${styleAndQuality}.`; break;
+            default: finalPrompt = `${corePrompt}, ${styleAndQuality}.`;
         }
         
-        const objectUrl = await generateVideo(finalPrompt, startImage);
+        const { operationName } = await startVideoGeneration(finalPrompt, startImage);
 
-        if (objectUrl) {
-          setGeneratedVideoUrl(objectUrl);
-        } else {
-            setError('The AI could not generate a video for this prompt. Please try a different one.');
-        }
+        pollingIntervalRef.current = setInterval(async () => {
+            try {
+                const result = await pollVideoGeneration(operationName);
+                if (typeof result === 'string') { // Success: got blob URL
+                    if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+                    pollingIntervalRef.current = null;
+                    setGeneratedVideoUrl(result);
+                    setIsLoading(false);
+                    setLoadingMessage('');
+                } else if (result && result.status === 'pending') {
+                    // Still pending, do nothing and wait for the next interval
+                } else { // Unexpected response
+                    if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+                    pollingIntervalRef.current = null;
+                    setError('An unexpected error occurred while checking video status.');
+                    setIsLoading(false);
+                    setLoadingMessage('');
+                }
+            } catch (pollError) {
+                console.error("Polling failed:", pollError);
+                if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+                pollingIntervalRef.current = null;
+                setError(pollError instanceof Error ? pollError.message : 'Failed to get video status.');
+                setIsLoading(false);
+                setLoadingMessage('');
+            }
+        }, 5000); // Poll every 5 seconds
 
     } catch (e) {
         console.error(e);
         setError(e instanceof Error ? e.message : 'An unknown error occurred during video generation.');
-    } finally {
         setIsLoading(false);
         setLoadingMessage('');
     }

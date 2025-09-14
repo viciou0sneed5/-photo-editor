@@ -53,26 +53,54 @@ export async function editImage(base64ImageData: string, mimeType: string, promp
   }
 }
 
+export async function startVideoGeneration(prompt: string, startImage: { base64: string; mimeType: string } | null): Promise<{ operationName: string }> {
+  try {
+    const response = await apiFetch('/gemini/generate-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, startImage }),
+    });
+    return response;
+  } catch (error) {
+    console.error("Error starting video generation:", error);
+    throw error;
+  }
+}
 
-export async function generateVideo(prompt: string, startImage: { base64: string; mimeType: string } | null): Promise<string | null> {
+export async function pollVideoGeneration(operationName: string): Promise<string | { status: 'pending' } | null> {
+    const BASE_URL = 'http://localhost:3001';
+    const token = getAuthToken();
+    const headers: Record<string, string> = {};
+
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
     try {
-        const response = await apiFetch('/gemini/generate-video', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt, startImage }),
+        const response = await fetch(`${BASE_URL}/api/gemini/video-status/${operationName}`, {
+            method: 'GET',
+            headers,
         });
-        
-        // The backend now handles polling and returns a direct, authenticated download link.
-        // We fetch this URL to get the video blob.
-        const videoResponse = await fetch(response.videoUrl);
-        if (!videoResponse.ok) {
-            throw new Error(`Failed to download video from signed URL: ${videoResponse.statusText}`);
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: 'Failed to parse server error.' }));
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
         }
-        const videoBlob = await videoResponse.blob();
-        return URL.createObjectURL(videoBlob);
+
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return await response.json(); // e.g., { status: 'pending' }
+        } else {
+            const videoBlob = await response.blob();
+            if (videoBlob.size === 0) {
+                console.warn('Received an empty blob for the video.');
+                return null;
+            }
+            return URL.createObjectURL(videoBlob);
+        }
 
     } catch (error) {
-        console.error("Error calling backend for video generation:", error);
+        console.error("Error polling for video generation status:", error);
         throw error;
     }
 }

@@ -1,8 +1,8 @@
-
 import React, { useState, useContext } from 'react';
-import { SparklesIcon, UserIcon, MailIcon, LockIcon } from '../Icons';
+import { UserIcon, MailIcon, LockIcon } from '../Icons';
 import { signup as apiSignup } from '../../services/authService';
 import { AuthContext } from '../../contexts/AuthContext';
+import { Logo } from '../Logo';
 
 interface SignupPageProps {
   onNavigateToLogin: () => void;
@@ -45,8 +45,8 @@ export default function SignupPage({ onNavigateToLogin, onSignupSuccess }: Signu
     <div className="min-h-screen bg-gray-900 text-gray-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-            <div className="inline-block p-3 bg-indigo-600 rounded-xl mb-4">
-                <SparklesIcon className="w-10 h-10 text-white" />
+            <div className="inline-flex items-center justify-center p-3 bg-indigo-600 rounded-xl mb-4">
+                <Logo className="w-10 h-10" />
             </div>
             <h1 className="text-3xl font-bold text-white">Create Your Account</h1>
             <p className="text-indigo-300">Join to start creating with AI</p>

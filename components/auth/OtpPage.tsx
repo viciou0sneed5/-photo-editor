@@ -1,8 +1,7 @@
-
 import React, { useState, useContext } from 'react';
-import { SparklesIcon } from '../Icons';
 import { AuthContext } from '../../contexts/AuthContext';
 import { verifyOtp as apiVerifyOtp } from '../../services/authService';
+import { Logo } from '../Logo';
 
 interface OtpPageProps {
   userEmail: string | null;
@@ -24,8 +23,8 @@ export default function OtpPage({ userEmail, onNavigateToLogin }: OtpPageProps) 
     <div className="min-h-screen bg-gray-900 text-gray-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-            <div className="inline-block p-3 bg-indigo-600 rounded-xl mb-4">
-                <SparklesIcon className="w-10 h-10 text-white" />
+            <div className="inline-flex items-center justify-center p-3 bg-indigo-600 rounded-xl mb-4">
+                <Logo className="w-10 h-10" />
             </div>
             <h1 className="text-3xl font-bold text-white">Verification Bypassed</h1>
              <p className="text-indigo-300 mt-2">

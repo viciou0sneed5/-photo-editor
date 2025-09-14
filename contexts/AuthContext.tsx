@@ -1,6 +1,4 @@
-
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
-import { continueWithGoogle as apiContinueWithGoogle } from '../services/authService';
 import type { User } from '../services/authService';
 
 interface AuthContextType {
@@ -9,7 +7,6 @@ interface AuthContextType {
   isLoading: boolean;
   login: (user: User) => void;
   logout: () => void;
-  continueWithGoogle: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType>({
@@ -18,7 +15,6 @@ export const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   login: () => {},
   logout: () => {},
-  continueWithGoogle: async () => {},
 });
 
 interface AuthProviderProps {
@@ -30,18 +26,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for a logged-in user in localStorage on initial load
-    try {
-      const storedUser = localStorage.getItem('currentUser');
-      if (storedUser) {
-        setCurrentUser(JSON.parse(storedUser));
+    // Check for user in URL from Google OAuth redirect
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const userStr = params.get('user');
+
+    if (token && userStr) {
+      try {
+        const user = JSON.parse(decodeURIComponent(userStr));
+        // The token is now part of the user object from the backend
+        login(user); 
+        // Clean up the URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } catch (e) {
+        console.error("Failed to parse user data from URL", e);
       }
-    } catch (error) {
-      console.error("Failed to parse user from localStorage", error);
-      localStorage.removeItem('currentUser');
-    } finally {
-        setIsLoading(false);
+    } else {
+      // Fallback to check localStorage if no URL params
+      try {
+        const storedUser = localStorage.getItem('currentUser');
+        if (storedUser) {
+          setCurrentUser(JSON.parse(storedUser));
+        }
+      } catch (error) {
+        console.error("Failed to parse user from localStorage", error);
+        localStorage.removeItem('currentUser');
+      }
     }
+    setIsLoading(false);
   }, []);
 
   const login = (user: User) => {
@@ -53,11 +65,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.removeItem('currentUser');
     setCurrentUser(null);
   };
-  
-  const continueWithGoogle = async () => {
-    const user = await apiContinueWithGoogle();
-    login(user);
-  };
 
   const value = {
     currentUser,
@@ -65,7 +72,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     login,
     logout,
-    continueWithGoogle
   };
 
   return (

@@ -1,4 +1,3 @@
-
 // --- REAL AUTHENTICATION SERVICE ---
 // This file now makes API calls to a secure backend server.
 // The backend is responsible for handling user data, passwords, and sessions.
@@ -66,29 +65,5 @@ export const verifyOtp = (email: string, otp: string): Promise<User> => {
     return Promise.reject(new Error("OTP verification is not supported in this backend implementation."));
 };
 
-
-/**
- * Simulates the "Continue with Google" flow.
- * In a real app, this would redirect to the backend's Google OAuth endpoint.
- * The backend would handle the OAuth dance with Google and then redirect back to the frontend with a session token.
- */
-export const continueWithGoogle = async (): Promise<User> => {
-    // This is a simplified placeholder.
-    // A real implementation would involve a redirect or popup window.
-    // window.location.href = 'http://localhost:3001/api/auth/google';
-    
-    // For now, we'll simulate a mock response you might get back from your backend
-    // after a successful Google sign-in.
-    console.warn("Simulating Google Sign-In. In production, this would redirect to the backend.");
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            const mockUser: User = {
-                _id: 'google-user-123',
-                name: 'Google User',
-                email: 'google-user@example.com',
-                token: 'mock-google-jwt-token'
-            };
-            resolve(mockUser);
-        }, 500);
-    });
-};
+// The "Continue with Google" flow is now handled by redirecting to the backend.
+// This client-side function is no longer needed.

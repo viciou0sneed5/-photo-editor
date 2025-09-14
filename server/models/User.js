@@ -1,4 +1,3 @@
-
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
@@ -15,15 +14,21 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: true,
+    // Password is not required because users can sign up via Google
   },
+  googleId: {
+    type: String,
+    unique: true,
+    sparse: true, // Ensures unique constraint only applies to documents with this field
+  }
 }, {
   timestamps: true, // Adds createdAt and updatedAt timestamps
 });
 
 // Middleware to hash password before saving
 userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) {
+  // Only hash the password if it has been modified (or is new) and exists
+  if (!this.isModified('password') || !this.password) {
     return next();
   }
   const salt = await bcrypt.genSalt(10);

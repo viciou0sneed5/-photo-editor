@@ -1,8 +1,8 @@
-
 import React, { useState, useContext } from 'react';
-import { SparklesIcon, MailIcon, LockIcon, GoogleIcon } from '../Icons';
+import { MailIcon, LockIcon, GoogleIcon } from '../Icons';
 import { AuthContext } from '../../contexts/AuthContext';
 import { login as apiLogin } from '../../services/authService';
+import { Logo } from '../Logo';
 
 interface LoginPageProps {
   onNavigateToSignup: () => void;
@@ -13,7 +13,7 @@ export default function LoginPage({ onNavigateToSignup }: LoginPageProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { login, continueWithGoogle } = useContext(AuthContext);
+  const { login } = useContext(AuthContext);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,27 +33,20 @@ export default function LoginPage({ onNavigateToSignup }: LoginPageProps) {
     }
   };
   
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      await continueWithGoogle();
-    } catch (err) {
-       setError(err instanceof Error ? err.message : 'An unknown error occurred.');
-       setIsLoading(false);
-    }
-    // No need to set loading to false on success, as the app will transition away.
+  const handleGoogleSignIn = () => {
+    // Redirect to the backend endpoint that starts the Google OAuth flow.
+    window.location.href = 'http://localhost:3001/api/auth/google';
   };
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-            <div className="inline-block p-3 bg-indigo-600 rounded-xl mb-4">
-                <SparklesIcon className="w-10 h-10 text-white" />
+            <div className="inline-flex items-center justify-center p-3 bg-indigo-600 rounded-xl mb-4">
+                <Logo className="w-10 h-10" />
             </div>
             <h1 className="text-3xl font-bold text-white">Welcome Back</h1>
-            <p className="text-indigo-300">Sign in to access the AI Creative Suite</p>
+            <p className="text-indigo-300">Sign in to access कला AI</p>
         </div>
 
         <div className="bg-gray-800 p-8 rounded-2xl shadow-lg border border-gray-700">
