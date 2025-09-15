@@ -50,6 +50,16 @@ export const ImageIcon: React.FC<IconProps> = ({ className }) => (
     </svg>
 );
 
+export const ImagePlusIcon: React.FC<IconProps> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"></path>
+        <line x1="16" x2="22" y1="5" y2="5"></line>
+        <line x1="19" x2="19" y1="2" y2="8"></line>
+        <circle cx="9" cy="9" r="2"></circle>
+        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+    </svg>
+);
+
 export const LightbulbIcon: React.FC<IconProps> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
         <path d="M15 14c.2-1 .7-1.7 1.5-2.5C17.7 10.2 18 9 18 7c0-2.2-1.8-4-4-4S10 4.8 10 7c0 2 .3 3.2 1.5 4.5.8.8 1.3 1.5 1.5 2.5"></path>

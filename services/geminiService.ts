@@ -53,33 +53,34 @@ export async function editImage(base64ImageData: string, mimeType: string, promp
   }
 }
 
-export async function startVideoGeneration(prompt: string, startImage: { base64: string; mimeType: string } | null): Promise<{ operationName: string }> {
+export async function generateImages(prompt: string, numberOfImages: number, aspectRatio: string): Promise<string[]> {
   try {
-    const response = await apiFetch('/gemini/generate-video', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, startImage }),
+    const response = await apiFetch('/gemini/generate-images', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, numberOfImages, aspectRatio }),
     });
-    return response;
+    return response.images; // Expecting the backend to return { images: [...] }
   } catch (error) {
-    console.error("Error starting video generation:", error);
+    console.error("Error calling backend for image generation:", error);
     throw error;
   }
 }
 
-export async function pollVideoGeneration(operationName: string): Promise<string | { status: 'pending' } | null> {
+export async function generateVideo(prompt: string): Promise<string> {
     const BASE_URL = 'http://localhost:3001';
     const token = getAuthToken();
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
 
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
     }
 
     try {
-        const response = await fetch(`${BASE_URL}/api/gemini/video-status/${operationName}`, {
-            method: 'GET',
+        const response = await fetch(`${BASE_URL}/api/gemini/generate-video`, {
+            method: 'POST',
             headers,
+            body: JSON.stringify({ prompt }),
         });
 
         if (!response.ok) {
@@ -87,20 +88,15 @@ export async function pollVideoGeneration(operationName: string): Promise<string
             throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
         }
 
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-            return await response.json(); // e.g., { status: 'pending' }
-        } else {
-            const videoBlob = await response.blob();
-            if (videoBlob.size === 0) {
-                console.warn('Received an empty blob for the video.');
-                return null;
-            }
-            return URL.createObjectURL(videoBlob);
+        const videoBlob = await response.blob();
+        if (videoBlob.size === 0) {
+            console.warn('Received an empty blob for the video.');
+            throw new Error("The AI service returned an empty video file.");
         }
+        return URL.createObjectURL(videoBlob);
 
     } catch (error) {
-        console.error("Error polling for video generation status:", error);
+        console.error("Error calling backend for video generation:", error);
         throw error;
     }
 }

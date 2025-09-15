@@ -11,8 +11,6 @@ interface VideoViewerProps {
 }
 
 export const VideoViewer: React.FC<VideoViewerProps> = ({ startImageSrc, videoSrc, isLoading, loadingMessage }) => {
-  const fullImageSrc = startImageSrc ? `data:image/png;base64,${startImageSrc}` : null;
-  
   return (
     <div className="bg-gray-800 rounded-2xl p-4 flex flex-col gap-3 border border-gray-700 h-full w-full">
       <div className="flex justify-between items-center h-8">
@@ -37,8 +35,6 @@ export const VideoViewer: React.FC<VideoViewerProps> = ({ startImageSrc, videoSr
           <video src={videoSrc} controls autoPlay loop className="w-full h-full object-contain">
             Your browser does not support the video tag.
           </video>
-        ) : fullImageSrc ? (
-            <img src={fullImageSrc} alt="Starting frame" className="w-full h-full object-contain" />
         ) : (
           <div className="text-center text-gray-500">
             <VideoIcon className="w-16 h-16 mx-auto mb-2"/>
