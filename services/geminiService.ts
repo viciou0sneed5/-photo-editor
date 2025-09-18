@@ -53,20 +53,6 @@ export async function editImage(base64ImageData: string, mimeType: string, promp
   }
 }
 
-export async function generateImages(prompt: string, numberOfImages: number, aspectRatio: string): Promise<string[]> {
-  try {
-    const response = await apiFetch('/gemini/generate-images', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, numberOfImages, aspectRatio }),
-    });
-    return response.images; // Expecting the backend to return { images: [...] }
-  } catch (error) {
-    console.error("Error calling backend for image generation:", error);
-    throw error;
-  }
-}
-
 export async function generateVideo(prompt: string): Promise<string> {
     const BASE_URL = 'http://localhost:3001';
     const token = getAuthToken();

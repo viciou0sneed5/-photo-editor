@@ -8,13 +8,11 @@ import { ImageComparator } from './components/ImageComparator';
 import { AdvancedControls } from './components/AdvancedControls';
 import { VideoControls } from './components/VideoControls';
 import { CameraCapture } from './components/CameraCapture';
-import { ImageGeneratorControls } from './components/ImageGeneratorControls';
-import { GeneratedImageViewer } from './components/GeneratedImageViewer';
-import { editImage, generateVideo, generateImages } from './services/geminiService';
+import { editImage, generateVideo } from './services/geminiService';
 import type { ImageFile } from './types';
-import { UploadIcon, SparklesIcon, LightbulbIcon, UndoIcon, RedoIcon, DownloadIcon, LayoutColumnsIcon, LayoutGridIcon, ImagesIcon, TrashIcon, CameraIcon, VideoIcon, ImagePlusIcon } from './components/Icons';
+import { UploadIcon, SparklesIcon, LightbulbIcon, UndoIcon, RedoIcon, DownloadIcon, LayoutColumnsIcon, LayoutGridIcon, ImagesIcon, TrashIcon, CameraIcon, VideoIcon } from './components/Icons';
 
-type EditorMode = 'photo' | 'video' | 'generation';
+type EditorMode = 'photo' | 'video';
 type ViewMode = 'side-by-side' | 'slider';
 type ImageHistory = { edits: string[]; currentIndex: number; };
 type HistoryState = Record<number, ImageHistory>;
@@ -48,22 +46,6 @@ const videoSuggestions = [
   'A chef expertly tossing a pizza in the air, slow motion',
   'A time-lapse of clouds moving across the sky',
 ];
-
-const imageGenerationSuggestions = [
-  'A hyper-realistic photo of a cat astronaut on the moon',
-  'A surreal oil painting of a whale swimming in a cloudy sky',
-  'A logo for a coffee shop named "The Starship Brew"',
-  'Pixel art of a fantasy castle on a floating island',
-  'A cinematic 8k photo of a futuristic cyberpunk city in the rain',
-  'A watercolor illustration of a fox reading a book in a forest',
-  'A 3D render of a delicious, colorful donut with sprinkles',
-  'A vintage travel poster for a trip to Mars',
-  'An abstract pattern of geometric shapes in pastel colors',
-  'A detailed vector illustration of a robotic hummingbird',
-  'A cute sticker of a smiling avocado with sunglasses',
-  'A dramatic concept art of a knight facing a dragon',
-];
-
 
 const loadingMessages = [
     "Generating your video...",
@@ -106,12 +88,6 @@ export default function App() {
   const [videoQuality, setVideoQuality] = useState<string>('High');
   const [videoStyle, setVideoStyle] = useState<string>('Cinematic');
   const [videoEffect, setVideoEffect] = useState<string>('None');
-
-  // Image Generation-specific state
-  const [generatedImages, setGeneratedImages] = useState<string[]>([]);
-  const [numberOfImages, setNumberOfImages] = useState<number>(1);
-  const [aspectRatio, setAspectRatio] = useState<string>('1:1');
-
 
   // Photo derived state
   const activeHistory = activeImageIndex !== null ? histories[activeImageIndex] : null;
@@ -170,10 +146,6 @@ export default function App() {
     setVideoQuality('High');
     setVideoStyle('Cinematic');
     setVideoEffect('None');
-
-    setGeneratedImages([]);
-    setNumberOfImages(1);
-    setAspectRatio('1:1');
   };
 
   const handleModeChange = (mode: EditorMode) => {
@@ -324,33 +296,6 @@ export default function App() {
     }
   }, [prompt, videoDuration, videoQuality, videoStyle, videoEffect]);
 
-  const handleGenerateImageRequest = useCallback(async () => {
-    if (!prompt.trim()) {
-        setError('Please provide a prompt to generate an image.');
-        return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-    setResponseText(null);
-    setGeneratedImages([]);
-
-    try {
-        const images = await generateImages(prompt, numberOfImages, aspectRatio);
-        if (images && images.length > 0) {
-            setGeneratedImages(images);
-        } else {
-            setError('The AI did not return any images. It might have refused the request. Please try a different prompt.');
-        }
-    } catch (e) {
-        console.error(e);
-        setError(e instanceof Error ? e.message : 'An unknown error occurred during image generation.');
-    } finally {
-        setIsLoading(false);
-    }
-  }, [prompt, numberOfImages, aspectRatio]);
-
-
   const handleUndo = () => {
     if (canUndo && activeImageIndex !== null) {
       setHistories(prev => ({ ...prev, [activeImageIndex]: { ...prev[activeImageIndex], currentIndex: prev[activeImageIndex].currentIndex - 1 } }));
@@ -377,11 +322,10 @@ export default function App() {
   const isButtonDisabled = (
     (editorMode === 'photo' && (!isPhotoEditingReady || !prompt.trim())) || 
     (editorMode === 'video' && !prompt.trim()) || 
-    (editorMode === 'generation' && !prompt.trim()) || 
     isLoading
   );
   const isEdited = activeHistory ? activeHistory.currentIndex > 0 : false;
-  const suggestions = editorMode === 'photo' ? photoSuggestions : (editorMode === 'video' ? videoSuggestions : imageGenerationSuggestions);
+  const suggestions = editorMode === 'photo' ? photoSuggestions : videoSuggestions;
   
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col font-sans">
@@ -399,13 +343,10 @@ export default function App() {
         <div className="lg:w-1/3 flex flex-col gap-6 bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700">
             <div>
               <div className="flex bg-gray-700/50 rounded-lg p-1 mb-6">
-                  <button onClick={() => handleModeChange('photo')} className={`w-1/3 py-2.5 text-sm font-bold flex items-center justify-center gap-2 rounded-md transition-colors ${editorMode === 'photo' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:bg-gray-700'}`}>
+                  <button onClick={() => handleModeChange('photo')} className={`w-1/2 py-2.5 text-sm font-bold flex items-center justify-center gap-2 rounded-md transition-colors ${editorMode === 'photo' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:bg-gray-700'}`}>
                       <CameraIcon className="w-5 h-5"/> Photo Editor
                   </button>
-                  <button onClick={() => handleModeChange('generation')} className={`w-1/3 py-2.5 text-sm font-bold flex items-center justify-center gap-2 rounded-md transition-colors ${editorMode === 'generation' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:bg-gray-700'}`}>
-                      <ImagePlusIcon className="w-5 h-5"/> Image Generator
-                  </button>
-                   <button onClick={() => handleModeChange('video')} className={`w-1/3 py-2.5 text-sm font-bold flex items-center justify-center gap-2 rounded-md transition-colors ${editorMode === 'video' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:bg-gray-700'}`}>
+                   <button onClick={() => handleModeChange('video')} className={`w-1/2 py-2.5 text-sm font-bold flex items-center justify-center gap-2 rounded-md transition-colors ${editorMode === 'video' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:bg-gray-700'}`}>
                       <VideoIcon className="w-5 h-5"/> Video Generator
                   </button>
               </div>
@@ -452,7 +393,6 @@ export default function App() {
                 <SparklesIcon className="w-6 h-6" />
                 {editorMode === 'photo' && '2. Describe Your Edit'}
                 {editorMode === 'video' && '1. Describe Your Video'}
-                {editorMode === 'generation' && '1. Describe Your Image'}
               </h2>
               <button onClick={() => setShowSuggestions(!showSuggestions)} className="flex items-center gap-1.5 py-1 px-3 text-sm text-indigo-300 bg-gray-700/50 hover:bg-gray-700 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500" aria-expanded={showSuggestions} aria-controls="suggestion-panel">
                 <LightbulbIcon className="w-4 h-4" />
@@ -488,8 +428,7 @@ export default function App() {
             )}
             <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder={
                 editorMode === 'photo' ? "e.g., 'add a futuristic city in the background'" : 
-                editorMode === 'video' ? "e.g., 'a cinematic shot of a cat driving a car'" :
-                "e.g., 'a hyper-realistic photo of a cat astronaut'"
+                "e.g., 'a cinematic shot of a cat driving a car'"
             } className="w-full h-32 p-3 bg-gray-700 border-2 border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200 resize-none placeholder-gray-400" disabled={isLoading || (editorMode === 'photo' && activeImageIndex === null)} />
           </div>
           
@@ -520,29 +459,14 @@ export default function App() {
             />
           )}
 
-          {editorMode === 'generation' && (
-            <ImageGeneratorControls
-              numberOfImages={numberOfImages}
-              setNumberOfImages={setNumberOfImages}
-              aspectRatio={aspectRatio}
-              setAspectRatio={setAspectRatio}
-              disabled={isLoading}
-            />
-          )}
-
           <button onClick={
             editorMode === 'photo' ? handleEditRequest : 
-            editorMode === 'video' ? handleGenerateVideoRequest : 
-            handleGenerateImageRequest
+            handleGenerateVideoRequest
           } disabled={isButtonDisabled} className={`w-full flex items-center justify-center gap-3 py-3 px-6 text-lg font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 ${isButtonDisabled ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg hover:shadow-indigo-500/50'}`}>
             {isLoading ? (
-                editorMode === 'photo' ? 'Editing...' :
-                editorMode === 'video' ? 'Generating...' :
-                'Generating...'
+                editorMode === 'photo' ? 'Editing...' : 'Generating...'
             ) : (
-                editorMode === 'photo' ? 'Generate Edit' :
-                editorMode === 'video' ? 'Generate Video' :
-                'Generate Image(s)'
+                editorMode === 'photo' ? 'Generate Edit' : 'Generate Video'
             )}
             <SparklesIcon className="w-5 h-5" />
           </button>
@@ -588,17 +512,12 @@ export default function App() {
                   />
               )}
             </>
-          ) : editorMode === 'video' ? (
+          ) : (
             <VideoViewer
                 startImageSrc={videoStartImage?.base64 ?? null}
                 videoSrc={generatedVideoUrl}
                 isLoading={isLoading}
                 loadingMessage={loadingMessage}
-            />
-          ) : (
-            <GeneratedImageViewer
-                images={generatedImages}
-                isLoading={isLoading}
             />
           )}
         </div>
